@@ -1,0 +1,6 @@
+[
+  {
+    "repository": "LMODroid-Devices/device_google_gs101",
+    "target_path": "device/google/gs101"
+  }
+]

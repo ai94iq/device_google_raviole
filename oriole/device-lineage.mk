@@ -4,6 +4,6 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
-DEVICE_PACKAGE_OVERLAYS += $(LOCAL_PATH)/oriole/overlay-lineage
+DEVICE_PACKAGE_OVERLAYS += $(LOCAL_PATH)/oriole/overlay-lmodroid
 
 $(call inherit-product, $(LOCAL_PATH)/device-lineage.mk)

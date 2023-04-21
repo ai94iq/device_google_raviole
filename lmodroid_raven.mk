@@ -6,18 +6,18 @@
 
 # Inherit some common Lineage stuff.
 TARGET_DISABLE_EPPE := true
-$(call inherit-product, vendor/lineage/config/common_full_phone.mk)
+$(call inherit-product, vendor/lmodroid/config/common_full_phone.mk)
 
 # Inherit device configuration
 $(call inherit-product, device/google/raviole/aosp_raven.mk)
-$(call inherit-product, device/google/gs101/lineage_common.mk)
+$(call inherit-product, device/google/gs101/lmodroid_common.mk)
 
 include device/google/raviole/raven/device-lineage.mk
 
 # Device identifier. This must come after all inclusions
 PRODUCT_BRAND := google
 PRODUCT_MODEL := Pixel 6 Pro
-PRODUCT_NAME := lineage_raven
+PRODUCT_NAME := lmodroid_raven
 
 # Boot animation
 TARGET_SCREEN_HEIGHT := 3120
