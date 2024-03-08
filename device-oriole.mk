@@ -14,6 +14,9 @@
 # limitations under the License.
 #
 
+TARGET_KERNEL_DIR ?= device/google/raviole-kernel
+TARGET_BOARD_KERNEL_HEADERS := device/google/raviole-kernel/kernel-headers
+
 $(call inherit-product-if-exists, vendor/google_devices/raviole/prebuilts/device-vendor-oriole.mk)
 $(call inherit-product-if-exists, vendor/google_devices/gs101/prebuilts/device-vendor.mk)
 $(call inherit-product-if-exists, vendor/google_devices/gs101/proprietary/device-vendor.mk)
@@ -30,7 +33,8 @@ include device/google/gs101/device-shipping-common.mk
 include device/google/gs101/fingerprint/udfps_common.mk
 include device/google/gs101/telephony/pktrouter.mk
 include hardware/google/pixel/vibrator/cs40l25/device.mk
-include device/google/gs101/bluetooth/bluetooth.mk
+include device/google/gs-common/bcmbt/bluetooth.mk
+include device/google/gs-common/touch/stm/stm11.mk
 
 ifeq ($(filter factory_oriole, $(TARGET_PRODUCT)),)
 include device/google/gs101/fingerprint/udfps_shipping.mk
@@ -73,21 +77,33 @@ PRODUCT_PRODUCT_PROPERTIES += \
 
 # Bluetooth Tx power caps for oriole
 PRODUCT_COPY_FILES += \
-    $(LOCAL_PATH)/bluetooth_power_limits_oriole.csv:$(TARGET_COPY_OUT_VENDOR)/etc/bluetooth_power_limits.csv \
-    $(LOCAL_PATH)/bluetooth_power_limits_oriole_jp.csv:$(TARGET_COPY_OUT_VENDOR)/etc/bluetooth_power_limits_JP.csv \
-    $(LOCAL_PATH)/bluetooth_power_limits_G9S9B_US.csv:$(TARGET_COPY_OUT_VENDOR)/etc/bluetooth_power_limits_G9S9B_US.csv \
-    $(LOCAL_PATH)/bluetooth_power_limits_GB7N6_US.csv:$(TARGET_COPY_OUT_VENDOR)/etc/bluetooth_power_limits_GB7N6_US.csv \
-    $(LOCAL_PATH)/bluetooth_power_limits_G9S9B_EU.csv:$(TARGET_COPY_OUT_VENDOR)/etc/bluetooth_power_limits_G9S9B_EU.csv \
-    $(LOCAL_PATH)/bluetooth_power_limits_GB7N6_EU.csv:$(TARGET_COPY_OUT_VENDOR)/etc/bluetooth_power_limits_GB7N6_EU.csv
+    device/google/raviole/bluetooth_power_limits_oriole.csv:$(TARGET_COPY_OUT_VENDOR)/etc/bluetooth_power_limits.csv \
+    device/google/raviole/bluetooth_power_limits_oriole_jp.csv:$(TARGET_COPY_OUT_VENDOR)/etc/bluetooth_power_limits_JP.csv \
+    device/google/raviole/bluetooth_power_limits_G9S9B_US.csv:$(TARGET_COPY_OUT_VENDOR)/etc/bluetooth_power_limits_G9S9B_US.csv \
+    device/google/raviole/bluetooth_power_limits_GB7N6_US.csv:$(TARGET_COPY_OUT_VENDOR)/etc/bluetooth_power_limits_GB7N6_US.csv \
+    device/google/raviole/bluetooth_power_limits_G9S9B_EU.csv:$(TARGET_COPY_OUT_VENDOR)/etc/bluetooth_power_limits_G9S9B_EU.csv \
+    device/google/raviole/bluetooth_power_limits_GB7N6_EU.csv:$(TARGET_COPY_OUT_VENDOR)/etc/bluetooth_power_limits_GB7N6_EU.csv
 
 
 # Bluetooth Hal Extension test tools
+ifneq (,$(filter eng, $(TARGET_BUILD_VARIANT)))
 PRODUCT_PACKAGES_DEBUG += \
     sar_test \
     hci_inject
+endif
 
-# WirelessCharger
-DEVICE_PRODUCT_COMPATIBILITY_MATRIX_FILE += device/google/gs101/device_framework_matrix_product_wireless.xml
+# userdebug specific
+ifneq (,$(filter eng, $(TARGET_BUILD_VARIANT)))
+# Bluetooth LE Audio Hardware offload
+PRODUCT_PRODUCT_PROPERTIES += \
+    ro.bluetooth.leaudio_offload.supported=true \
+    persist.bluetooth.leaudio_offload.disabled=true \
+    persist.bluetooth.le_audio_test=false
+endif
+
+# Bluetooth HAL
+PRODUCT_COPY_FILES += \
+	device/google/raviole/bluetooth/bt_vendor_overlay.conf:$(TARGET_COPY_OUT_VENDOR)/etc/bluetooth/bt_vendor_overlay.conf
 
 # MIPI Coex Configs
 PRODUCT_COPY_FILES += \
@@ -168,7 +184,7 @@ endif
 
 # Increment the SVN for any official public releases
 PRODUCT_VENDOR_PROPERTIES += \
-    ro.vendor.build.svn=64
+    ro.vendor.build.svn=75
 
 # Set support hide display cutout feature
 PRODUCT_PRODUCT_PROPERTIES += \
@@ -178,6 +194,10 @@ PRODUCT_PRODUCT_PROPERTIES += \
 PRODUCT_PACKAGES += \
     NoCutoutOverlay \
     AvoidAppsInCutoutOverlay
+
+# Android DeviceAsWebcam specific overlay
+PRODUCT_PACKAGES += \
+    DeviceAsWebcamOriole
 
 # SKU specific RROs
 PRODUCT_PACKAGES += \
@@ -197,7 +217,8 @@ PRODUCT_VENDOR_PROPERTIES += \
 
 # DCK properties based on target
 PRODUCT_PROPERTY_OVERRIDES += \
-    ro.gms.dck.eligible_wcc=2
+    ro.gms.dck.eligible_wcc=2 \
+    ro.gms.dck.se_capability=1
 
 # Trusty liboemcrypto.so
 PRODUCT_SOONG_NAMESPACES += vendor/google_devices/raviole/prebuilts
@@ -210,12 +231,6 @@ PRODUCT_PRODUCT_PROPERTIES += \
 PRODUCT_VENDOR_PROPERTIES += \
     persist.vendor.camera.exif_reveal_make_model=true
 
-# Bluetooth HAL
-PRODUCT_PACKAGES += \
-	bt_vendor.conf
-PRODUCT_COPY_FILES += \
-	device/google/raviole/bluetooth/bt_vendor_overlay.conf:$(TARGET_COPY_OUT_VENDOR)/etc/bluetooth/bt_vendor_overlay.conf
-
 # tetheroffload HAL
 PRODUCT_PACKAGES += \
 	vendor.samsung_slsi.hardware.tetheroffload@1.1-service
@@ -224,21 +239,17 @@ PRODUCT_PACKAGES += \
 PRODUCT_PRODUCT_PROPERTIES += \
     vendor.audio.hapticgenerator.distortion.output.gain=0.5
 
+# RKPD
+PRODUCT_PRODUCT_PROPERTIES += \
+    remote_provisioning.enable_rkpd=true \
+    remote_provisioning.hostname=remoteprovisioning.googleapis.com \
+
 # Set zram size
 PRODUCT_VENDOR_PROPERTIES += \
     vendor.zram.size=3g
 
 # This device is shipped with 31 (Android S)
 PRODUCT_SHIPPING_API_LEVEL := 31
-
-# userdebug specific
-ifneq (,$(filter eng, $(TARGET_BUILD_VARIANT)))
-# Bluetooth LE Audio Hardware offload
-PRODUCT_PRODUCT_PROPERTIES += \
-    ro.bluetooth.leaudio_offload.supported=true \
-    persist.bluetooth.leaudio_offload.disabled=true \
-    persist.bluetooth.le_audio_test=false
-endif
 
 # declare use of spatial audio
 PRODUCT_PROPERTY_OVERRIDES += \
@@ -255,23 +266,27 @@ PRODUCT_PACKAGES += \
 PRODUCT_COPY_FILES += \
     frameworks/native/data/etc/handheld_core_hardware.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/handheld_core_hardware.xml
 
-# Dolby integration
--include vendor/dolby/ds/dolby-buildspec.mk
-$(call inherit-product-if-exists, vendor/dolby/ds/dolby-product.mk)
-#  overwrite file coming from device/google/gs101/media_codecs_bo_c2.xml
-PRODUCT_COPY_FILES := \
-    device/google/raviole/media_codecs_dolby_c2.xml:$(TARGET_COPY_OUT_VENDOR)/etc/media_codecs_c2.xml \
-    $(PRODUCT_COPY_FILES)
-
-PRODUCT_RESTRICT_VENDOR_FILES := false
-
-# Enable adpf cpu hint session for SurfaceFlinger
-PRODUCT_DEFAULT_PROPERTY_OVERRIDES += \
-    debug.sf.enable_adpf_cpu_hint=true
-
 # Bluetooth OPUS codec
 PRODUCT_PRODUCT_PROPERTIES += \
     persist.bluetooth.opus.enabled=true
+
+# Location
+ifneq (,$(filter eng, $(TARGET_BUILD_VARIANT)))
+        PRODUCT_COPY_FILES += \
+		device/google/raviole/location/gps.xml.oriole:$(TARGET_COPY_OUT_VENDOR)/etc/gnss/gps.xml
+else
+        PRODUCT_COPY_FILES += \
+		device/google/raviole/location/gps_user.xml.oriole:$(TARGET_COPY_OUT_VENDOR)/etc/gnss/gps.xml
+endif
+
+# Enable DeviceAsWebcam support
+PRODUCT_VENDOR_PROPERTIES += \
+    ro.usb.uvc.enabled=true
+
+# Quick Start device-specific settings
+PRODUCT_PRODUCT_PROPERTIES += \
+    ro.quick_start.oem_id=00e0 \
+    ro.quick_start.device_id=oriole
 
 # HBM
 PRODUCT_PACKAGES += \
